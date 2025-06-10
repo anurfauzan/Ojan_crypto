@@ -14,7 +14,7 @@ const Spinner = () => (
 
 // Helper function to identify DEXs by name
 const isDEX = (exchangeName) => {
-    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot']; // Tambahkan DEX lain jika perlu
+    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot', 'arbitrum']; // Tambahkan DEX lain jika perlu
     const lowerCaseName = exchangeName.toLowerCase();
     return dexKeywords.some(keyword => lowerCaseName.includes(keyword));
 };
@@ -27,16 +27,17 @@ const cleanDexName = (exchangeName) => {
         .replace(/\(Polygon\)/g, '') // Remove (Polygon) etc.
         .replace(/\(BSC\)/g, '') // Remove (BSC)
         .replace(/\(Ethereum\)/g, '') // Remove (Ethereum)
+        .replace(/\(Arbitrum\)/g, '') // Remove (Arbitrum)
         .replace(/pool/gi, '') // Remove "pool" (case-insensitive)
+        .replace(/exchange/gi, '') // Remove "exchange"
         .trim();
-    
-    // Jika setelah dibersihkan jadi kosong, pakai nama aslinya
-    if (cleaned.length === 0) return exchangeName;
 
-    // Untuk memastikan nama tidak terlalu panjang
-    if (cleaned.length > 25) { // Jika nama masih terlalu panjang, truncate
-        return cleaned.substring(0, 22) + '...';
-    }
+    // Remove trailing hyphens, dots, or spaces
+    cleaned = cleaned.replace(/[-.\s]+$/, '');
+
+    // Jika setelah dibersihkan jadi kosong atau terlalu singkat, pakai nama aslinya
+    if (cleaned.length < 3) return exchangeName; 
+
     return cleaned;
 };
 
@@ -46,7 +47,7 @@ export default function App() {
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    
+
     // State untuk Modal Detail Koin
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCoinId, setSelectedCoinId] = useState(null);
@@ -60,7 +61,7 @@ export default function App() {
             setError('Silakan masukkan nama atau simbol token.');
             return;
         }
-        
+
         setLoading(true);
         setError(null);
         setSearchResults([]);
@@ -77,7 +78,7 @@ export default function App() {
                 setError(`Token "${searchTerm}" tidak ditemukan.`);
                 return;
             }
-            const filteredCoins = data.coins.filter(coin => coin.id); 
+            const filteredCoins = data.coins.filter(coin => coin.id); // Filter dipersingkat, hanya memastikan ada ID
             setSearchResults(filteredCoins);
 
         } catch (err) {
@@ -103,7 +104,7 @@ export default function App() {
             }
             const detailsData = await detailsResponse.json();
             setSelectedCoinDetails(detailsData);
-            
+
         } catch (err) {
             setModalError(err.message);
         } finally {
@@ -160,14 +161,14 @@ export default function App() {
                 {/* Area Tampilan Konten */}
                 <div className="space-y-6">
                     {loading && <Spinner />}
-                    
+
                     {error && (
                         <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
                            <AlertTriangle className="w-6 h-6"/>
                            <span>{error}</span>
                         </div>
                     )}
-                    
+
                     {searchResults.length > 0 && !loading && !error && (
                         <div className="bg-gray-800/50 rounded-lg p-1 sm:p-2">
                             <h3 className="text-xl font-bold text-white p-4">Hasil Pencarian</h3>
@@ -282,10 +283,10 @@ export default function App() {
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
                                                         {/* Logo Exchange */}
-                                                        <img src={ticker.market.logo || 'https://placehold.co/20x20/FFFFFF/000000?text=?'} alt={ticker.market.name} className="w-6 h-6 rounded-full bg-white p-0.5 mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/FFFFFF/000000?text=?'; }}/>
-                                                        
-                                                        {/* Logo Token (ditambahkan di sini) */}
-                                                        <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/FFFFFF/000000?text=?'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/FFFFFF/000000?text=?'; }}/>
+                                                        <img src={ticker.market.logo || 'https://placehold.co/20x20/22C55E/white?text=X'} alt={ticker.market.name} className="w-6 h-6 rounded-full bg-white p-0.5 mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/22C55E/white?text=X'; }}/>
+
+                                                        {/* Logo Token */}
+                                                        <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/60A5FA/white?text=T'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/60A5FA/white?text=T'; }}/>
 
                                                         <div className="flex-grow">
                                                             {/* Nama Bursa (dipersingkat jika DEX) */}
@@ -309,6 +310,4 @@ export default function App() {
             )}
         </div>
     );
-}
-
-                                
+                    }
