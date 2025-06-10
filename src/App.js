@@ -365,4 +365,37 @@ export default function App() {
                                     </div>
                                 )}
 
-                
+                                {/* Bursa (CEX/DEX) */}
+                                {selectedCoinDetails.tickers && selectedCoinDetails.tickers.length > 0 && (
+                                    <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
+                                        <h3 className="text-lg font-semibold text-white mb-2">Bursa Tersedia (Top 10)</h3>
+                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto scrollbar-thin">
+                                            {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
+                                                ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
+                                                    <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
+                                                        {/* Logo Token (ditampilkan) */}
+                                                        <img src={selectedCoinDetails.image?.thumb || genericPlaceholder} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2 bg-gray-900 p-0.5" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
+
+                                                        <div className="flex-grow">
+                                                            {/* Nama Bursa (dipersingkat jika DEX, sekarang lebih agresif) */}
+                                                            <p className="text-white font-medium">{isDEX(ticker.market.name) ? cleanDexName(ticker.market.name) : ticker.market.name}</p>
+                                                            {/* Pair */}
+                                                            <span className="text-gray-400 text-xs">{ticker.base}/{ticker.target}</span>
+                                                        </div>
+                                                        <span className="text-white font-bold mr-2">${ticker.converted_last.usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</span>
+                                                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${isDEX(ticker.market.name) ? 'bg-blue-900 text-blue-300' : 'bg-yellow-900 text-yellow-300'}`}>{isDEX(ticker.market.name) ? 'DEX' : 'CEX'}</span>
+                                                        <ArrowRight className="w-4 h-4 text-gray-400 ml-2"/>
+                                                    </a>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
