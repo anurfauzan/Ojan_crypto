@@ -14,7 +14,7 @@ const Spinner = () => (
 
 // Helper function to identify DEXs by name
 const isDEX = (exchangeName) => {
-    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot', 'arbitrum', 'balancer']; // Tambahkan DEX lain jika perlu
+    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot', 'arbitrum', 'balancer'];
     const lowerCaseName = exchangeName.toLowerCase();
     return dexKeywords.some(keyword => lowerCaseName.includes(keyword));
 };
@@ -30,6 +30,7 @@ const cleanDexName = (exchangeName) => {
         .replace(/\(Arbitrum\)/g, '') // Remove (Arbitrum)
         .replace(/pool/gi, '') // Remove "pool" (case-insensitive)
         .replace(/exchange/gi, '') // Remove "exchange"
+        .replace(/version/gi, '') // Remove "version"
         .trim();
     
     cleaned = cleaned.replace(/[-.\s]+$/, ''); // Remove trailing hyphens, dots, or spaces
@@ -45,6 +46,9 @@ const minimizeAddress = (address) => {
     if (address.length <= 12) return address; // Jika pendek, biarkan saja
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 };
+
+// Generic placeholder for missing images (data URI for a simple circle)
+const genericPlaceholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='gray'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3C/svg%3E";
 
 
 export default function App() {
@@ -236,7 +240,7 @@ export default function App() {
                                 <div className="flex justify-between items-center pb-4 border-b border-gray-700 mb-4">
                                     <div className="flex items-center space-x-3">
                                         {/* Logo utama koin yang diklik */}
-                                        <img src={selectedCoinDetails.image?.small || 'https://placehold.co/32x32/FFFFFF/000000?text=?'} alt={selectedCoinDetails.name} className="w-10 h-10 rounded-full" />
+                                        <img src={selectedCoinDetails.image?.small || genericPlaceholder} alt={selectedCoinDetails.name} className="w-10 h-10 rounded-full" />
                                         <div>
                                             <h2 className="text-2xl font-bold text-white">{selectedCoinDetails.name}</h2>
                                             <p className="text-gray-400 text-sm">{selectedCoinDetails.symbol?.toUpperCase()}</p>
@@ -254,9 +258,9 @@ export default function App() {
                                                 address && (
                                                     <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
                                                         <span className="text-gray-400">{platform}</span>
-                                                        {/* Perbaikan untuk overflow alamat kontrak: menggunakan minimizeAddress */}
+                                                        {/* Perbaikan untuk overflow alamat kontrak */}
                                                         <div className="flex items-center flex-grow mx-2 overflow-hidden">
-                                                            <span className="text-white truncate text-xs flex-grow">{minimizeAddress(address)}</span> {/* MENGGUNAKAN minimizeAddress */}
+                                                            <span className="text-white truncate text-xs flex-grow">{minimizeAddress(address)}</span> {/* Menggunakan minimizeAddress */}
                                                             <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0">
                                                                 <Clipboard className="w-4 h-4"/>
                                                             </button>
@@ -287,8 +291,9 @@ export default function App() {
                                             {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
+                                                        {/* TIDAK ADA LOGO BURSA */}
                                                         {/* Logo Token (tetap ditampilkan) */}
-                                                        <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/60A5FA/white?text=T'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/FFFFFF/000000?text=?'; }}/>
+                                                        <img src={selectedCoinDetails.image?.thumb || genericPlaceholder} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2 bg-gray-900 p-0.5" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
                                                         
                                                         <div className="flex-grow">
                                                             {/* Nama Bursa (dipersingkat jika DEX, sekarang lebih agresif) */}
@@ -312,4 +317,4 @@ export default function App() {
             )}
         </div>
     );
-                        }
+}
