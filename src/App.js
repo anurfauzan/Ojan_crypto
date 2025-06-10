@@ -14,22 +14,32 @@ const Spinner = () => (
 
 // Helper function to identify DEXs by name
 const isDEX = (exchangeName) => {
-    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve'];
+    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot']; // Tambahkan DEX lain jika perlu
     const lowerCaseName = exchangeName.toLowerCase();
     return dexKeywords.some(keyword => lowerCaseName.includes(keyword));
 };
 
-// Helper function to clean DEX names from long addresses
+// Helper function to clean DEX names from long addresses or extra info
 const cleanDexName = (exchangeName) => {
-    // Attempt to remove common long address patterns or irrelevant parts for DEX names
-    const cleanedName = exchangeName
+    let cleaned = exchangeName
         .replace(/\s*0x[0-9a-fA-F]{40}\s*/g, '') // Remove hex addresses
         .replace(/\(V[0-9]+\)/g, '') // Remove (V1), (V2), (V3)
         .replace(/\(Polygon\)/g, '') // Remove (Polygon) etc.
-        .replace(/pool/gi, '') // Remove "pool"
+        .replace(/\(BSC\)/g, '') // Remove (BSC)
+        .replace(/\(Ethereum\)/g, '') // Remove (Ethereum)
+        .replace(/pool/gi, '') // Remove "pool" (case-insensitive)
         .trim();
-    return cleanedName.length > 0 ? cleanedName : exchangeName; // Return original if cleaning makes it empty
+    
+    // Jika setelah dibersihkan jadi kosong, pakai nama aslinya
+    if (cleaned.length === 0) return exchangeName;
+
+    // Untuk memastikan nama tidak terlalu panjang
+    if (cleaned.length > 25) { // Jika nama masih terlalu panjang, truncate
+        return cleaned.substring(0, 22) + '...';
+    }
+    return cleaned;
 };
+
 
 export default function App() {
     const [searchTerm, setSearchTerm] = useState('');
