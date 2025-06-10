@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Coins, ArrowRight, TrendingUp, AlertTriangle, Clipboard, X } from 'lucide-react'; // Tambahkan X untuk tombol close modal
+import { Search, Coins, ArrowRight, TrendingUp, AlertTriangle, Clipboard, X } from 'lucide-react';
 
 // Komponen Spinner untuk loading state
 const Spinner = () => (
@@ -12,7 +12,7 @@ const Spinner = () => (
     </div>
 );
 
-// Helper function to identify DEXs by name (copied from your previous code)
+// Helper function to identify DEXs by name
 const isDEX = (exchangeName) => {
     const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve'];
     const lowerCaseName = exchangeName.toLowerCase();
@@ -25,7 +25,6 @@ export default function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     
-    // State untuk Modal Detail Koin
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCoinId, setSelectedCoinId] = useState(null);
     const [selectedCoinDetails, setSelectedCoinDetails] = useState(null);
@@ -33,7 +32,7 @@ export default function App() {
     const [modalError, setModalError] = useState(null);
 
     const handleSearch = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Mencegah refresh halaman
         if (!searchTerm) {
             setError('Silakan masukkan nama atau simbol token.');
             return;
@@ -41,18 +40,23 @@ export default function App() {
         
         setLoading(true);
         setError(null);
-        setSearchResults([]);
+        setSearchResults([]); // Bersihkan hasil sebelumnya
 
         try {
             const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${searchTerm}`);
-            if (!response.ok) throw new Error(`Gagal mencari token. Status: ${response.status}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Gagal mencari token. Status: ${response.status} - ${errorText.substring(0, 100)}...`);
+            }
             const data = await response.json();
 
             if (!data.coins || data.coins.length === 0) {
                 setError(`Token "${searchTerm}" tidak ditemukan.`);
                 return;
             }
-            const filteredCoins = data.coins.filter(coin => coin.market_cap_rank !== null && coin.id);
+            // FILTER DIPERSINGKAT: Hanya memastikan ada ID.
+            // market_cap_rank bisa null untuk beberapa hasil pencarian, jadi tidak dijadikan filter ketat.
+            const filteredCoins = data.coins.filter(coin => coin.id); 
             setSearchResults(filteredCoins);
 
         } catch (err) {
@@ -62,18 +66,19 @@ export default function App() {
         }
     };
 
-    // Fungsi untuk membuka modal dan mengambil detail koin
     const openCoinModal = async (coinId) => {
         setSelectedCoinId(coinId);
         setIsModalOpen(true);
         setModalLoading(true);
         setModalError(null);
-        setSelectedCoinDetails(null); // Bersihkan detail sebelumnya
+        setSelectedCoinDetails(null);
 
         try {
-            // Fetch detail koin
             const detailsResponse = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=true&community_data=false&developer_data=false&sparkline=false`);
-            if (!detailsResponse.ok) throw new Error('Gagal memuat detail koin.');
+            if (!detailsResponse.ok) {
+                const errorText = await detailsResponse.text();
+                throw new Error(`Gagal memuat detail koin: ${detailsResponse.status} - ${errorText.substring(0, 100)}...`);
+            }
             const detailsData = await detailsResponse.json();
             setSelectedCoinDetails(detailsData);
             
@@ -91,7 +96,6 @@ export default function App() {
         setModalError(null);
     };
 
-    // Fungsi untuk menyalin contract address
     const copyToClipboard = async (text) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -156,13 +160,12 @@ export default function App() {
                                     </thead>
                                     <tbody>
                                         {searchResults.map((coin) => (
-                                            // Menambahkan onClick handler ke setiap baris hasil pencarian
                                             <tr key={coin.id} className="border-t border-gray-700/50 hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openCoinModal(coin.id)}>
                                                 <td className="p-3 flex items-center gap-2">
                                                     <img src={coin.thumb} alt={coin.name} className="w-5 h-5 rounded-full" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/FFFFFF/000000?text=?'; }}/>
                                                     <span className="font-medium text-white">{coin.name}</span>
                                                 </td>
-                                                <td className="p-3 font-mono text-gray-400">{coin.symbol.toUpperCase()}</td>
+                                                <td className="p-3 font-mono text-gray-400">{coin.symbol?.toUpperCase()}</td>
                                                 <td className="p-3 text-right text-white">{coin.market_cap_rank || 'N/A'}</td>
                                             </tr>
                                         ))}
@@ -185,7 +188,7 @@ export default function App() {
                 </footer>
             </div>
 
-            {/* Modal Detail Koin (Tersembunyi secara default) */}
+            {/* Modal Detail Koin */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
                     <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform scale-95 animate-fade-in" onClick={(e) => e.stopPropagation()}>
@@ -202,7 +205,7 @@ export default function App() {
                         )}
                         {selectedCoinDetails && !modalLoading && !modalError && (
                             <div className="p-6">
-                                <div className="flex justify-between items-center mb-4">
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-700 mb-4">
                                     <div className="flex items-center space-x-3">
                                         <img src={selectedCoinDetails.image?.small || 'https://placehold.co/32x32/FFFFFF/000000?text=?'} alt={selectedCoinDetails.name} className="w-10 h-10 rounded-full" />
                                         <div>
@@ -217,7 +220,7 @@ export default function App() {
                                 {selectedCoinDetails.platforms && Object.keys(selectedCoinDetails.platforms).length > 0 && (
                                     <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
                                         <h3 className="text-lg font-semibold text-white mb-2">Contract Addresses</h3>
-                                        <div className="space-y-2 text-sm">
+                                        <div className="space-y-2 text-sm max-h-32 overflow-y-auto scrollbar-thin">
                                             {Object.entries(selectedCoinDetails.platforms).map(([platform, address]) => (
                                                 address && (
                                                     <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
@@ -250,7 +253,7 @@ export default function App() {
                                 {selectedCoinDetails.tickers && selectedCoinDetails.tickers.length > 0 && (
                                     <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
                                         <h3 className="text-lg font-semibold text-white mb-2">Bursa Tersedia (Top 10)</h3>
-                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto scrollbar-thin">
                                             {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
@@ -275,4 +278,5 @@ export default function App() {
             )}
         </div>
     );
-}
+                    }
+                        
