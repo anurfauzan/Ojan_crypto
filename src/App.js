@@ -19,6 +19,18 @@ const isDEX = (exchangeName) => {
     return dexKeywords.some(keyword => lowerCaseName.includes(keyword));
 };
 
+// Helper function to clean DEX names from long addresses
+const cleanDexName = (exchangeName) => {
+    // Attempt to remove common long address patterns or irrelevant parts for DEX names
+    const cleanedName = exchangeName
+        .replace(/\s*0x[0-9a-fA-F]{40}\s*/g, '') // Remove hex addresses
+        .replace(/\(V[0-9]+\)/g, '') // Remove (V1), (V2), (V3)
+        .replace(/\(Polygon\)/g, '') // Remove (Polygon) etc.
+        .replace(/pool/gi, '') // Remove "pool"
+        .trim();
+    return cleanedName.length > 0 ? cleanedName : exchangeName; // Return original if cleaning makes it empty
+};
+
 export default function App() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -55,7 +67,7 @@ export default function App() {
                 setError(`Token "${searchTerm}" tidak ditemukan.`);
                 return;
             }
-            const filteredCoins = data.coins.filter(coin => coin.id); // Filter dipersingkat, hanya memastikan ada ID
+            const filteredCoins = data.coins.filter(coin => coin.id); 
             setSearchResults(filteredCoins);
 
         } catch (err) {
@@ -207,6 +219,7 @@ export default function App() {
                             <div className="p-6">
                                 <div className="flex justify-between items-center pb-4 border-b border-gray-700 mb-4">
                                     <div className="flex items-center space-x-3">
+                                        {/* Logo utama koin yang diklik */}
                                         <img src={selectedCoinDetails.image?.small || 'https://placehold.co/32x32/FFFFFF/000000?text=?'} alt={selectedCoinDetails.name} className="w-10 h-10 rounded-full" />
                                         <div>
                                             <h2 className="text-2xl font-bold text-white">{selectedCoinDetails.name}</h2>
@@ -225,6 +238,7 @@ export default function App() {
                                                 address && (
                                                     <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
                                                         <span className="text-gray-400">{platform}</span>
+                                                        {/* Perbaikan untuk overflow alamat kontrak */}
                                                         <div className="flex items-center flex-grow mx-2 overflow-hidden">
                                                             <span className="text-white truncate text-xs flex-grow">{address}</span>
                                                             <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0">
@@ -257,9 +271,16 @@ export default function App() {
                                             {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
+                                                        {/* Logo Exchange */}
                                                         <img src={ticker.market.logo || 'https://placehold.co/20x20/FFFFFF/000000?text=?'} alt={ticker.market.name} className="w-6 h-6 rounded-full bg-white p-0.5 mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/FFFFFF/000000?text=?'; }}/>
+                                                        
+                                                        {/* Logo Token (ditambahkan di sini) */}
+                                                        <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/FFFFFF/000000?text=?'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/FFFFFF/000000?text=?'; }}/>
+
                                                         <div className="flex-grow">
-                                                            <p className="text-white font-medium">{ticker.market.name}</p>
+                                                            {/* Nama Bursa (dipersingkat jika DEX) */}
+                                                            <p className="text-white font-medium">{isDEX(ticker.market.name) ? cleanDexName(ticker.market.name) : ticker.market.name}</p>
+                                                            {/* Pair */}
                                                             <span className="text-gray-400 text-xs">{ticker.base}/{ticker.target}</span>
                                                         </div>
                                                         <span className="text-white font-bold mr-2">${ticker.converted_last.usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</span>
@@ -280,4 +301,4 @@ export default function App() {
     );
 }
 
-                    
+                                
