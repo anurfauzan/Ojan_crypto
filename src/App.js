@@ -145,18 +145,24 @@ export default function App() {
         if (selectedCoinDetails && selectedCoinId && chartContainerRef.current) {
             const fetchChartData = async () => {
                 try {
-                    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoinId}/market_chart?vs_currency=usd&days=7`);
-                    if (!response.ok) throw new Error('Gagal memuat data grafik.');
+                    // Ambil data OHLC untuk grafik candlestick (1 hari, karena CoinGecko days=7 di market_chart)
+                    // CoinGecko API untuk OHLC: /coins/{id}/ohlc?vs_currency=usd&days=1
+                    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoinId}/ohlc?vs_currency=usd&days=7`); // Ubah days sesuai kebutuhan
+                    if (!response.ok) throw new Error('Gagal memuat data grafik OHLC.');
                     const data = await response.json();
 
-                    if (!data.prices || data.prices.length === 0) {
+                    if (!data || data.length === 0) {
                         chartContainerRef.current.innerHTML = `<p class="text-center text-gray-500 py-4">Data grafik tidak tersedia.</p>`;
                         return;
                     }
 
-                    const chartData = data.prices.map(price => ({
-                        time: price[0] / 1000, 
-                        value: price[1] 
+                    // Format data untuk lightweight-charts candlestick
+                    const candlestickData = data.map(item => ({
+                        time: item[0] / 1000, // Waktu dalam detik
+                        open: item[1],
+                        high: item[2],
+                        low: item[3],
+                        close: item[4],
                     }));
 
                     // Bersihkan chart lama jika ada
@@ -165,12 +171,12 @@ export default function App() {
                         width: chartContainerRef.current.clientWidth,
                         height: 300,
                         layout: {
-                            backgroundColor: '#1a202c', 
-                            textColor: '#d1d4db', 
+                            backgroundColor: '#1a202c', // Warna latar belakang chart (dark)
+                            textColor: '#d1d4db', // Warna teks (light)
                         },
                         grid: {
-                            vertLines: { color: '#2d3748' }, 
-                            horzLines: { color: '#2d3748' }, 
+                            vertLines: { color: '#2d3748' }, // Garis grid vertikal
+                            horzLines: { color: '#2d3748' }, // Garis grid horizontal
                         },
                         timeScale: {
                             timeVisible: true,
@@ -181,12 +187,16 @@ export default function App() {
                         },
                     });
 
-                    const areaSeries = chart.addAreaSeries({
-                        lineColor: '#21C55E', 
-                        topColor: 'rgba(33, 197, 94, 0.4)', 
-                        bottomColor: 'rgba(33, 197, 94, 0.05)', 
+                    // Tambahkan candlestick series
+                    const candlestickSeries = chart.addCandlestickSeries({
+                        upColor: '#26a69a',   // Warna candlestick naik
+                        downColor: '#ef5350', // Warna candlestick turun
+                        borderVisible: false,
+                        wickColor: '#ffffff', // Warna sumbu candlestick
+                        wickUpColor: '#26a69a',
+                        wickDownColor: '#ef5350',
                     });
-                    areaSeries.setData(chartData);
+                    candlestickSeries.setData(candlestickData);
 
                     const resizeHandler = () => {
                         chart.applyOptions({ width: chartContainerRef.current.clientWidth });
