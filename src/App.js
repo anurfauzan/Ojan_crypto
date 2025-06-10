@@ -14,7 +14,7 @@ const Spinner = () => (
 
 // Helper function to identify DEXs by name
 const isDEX = (exchangeName) => {
-    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot', 'arbitrum'];
+    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve', 'spookyswap', 'camelot', 'arbitrum', 'balancer']; // Tambahkan DEX lain jika perlu
     const lowerCaseName = exchangeName.toLowerCase();
     return dexKeywords.some(keyword => lowerCaseName.includes(keyword));
 };
@@ -39,10 +39,10 @@ const cleanDexName = (exchangeName) => {
     return cleaned;
 };
 
-// Helper function to minimize contract addresses
+// Helper function to minimize contract addresses (for display only)
 const minimizeAddress = (address) => {
     if (!address) return '';
-    if (address.length <= 10) return address; // Jika pendek, biarkan saja
+    if (address.length <= 12) return address; // Jika pendek, biarkan saja
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 };
 
@@ -254,9 +254,9 @@ export default function App() {
                                                 address && (
                                                     <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
                                                         <span className="text-gray-400">{platform}</span>
-                                                        {/* Perbaikan untuk overflow alamat kontrak */}
+                                                        {/* Perbaikan untuk overflow alamat kontrak: menggunakan minimizeAddress */}
                                                         <div className="flex items-center flex-grow mx-2 overflow-hidden">
-                                                            <span className="text-white truncate text-xs flex-grow">{minimizeAddress(address)}</span> {/* Menggunakan minimizeAddress */}
+                                                            <span className="text-white truncate text-xs flex-grow">{minimizeAddress(address)}</span> {/* MENGGUNAKAN minimizeAddress */}
                                                             <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0">
                                                                 <Clipboard className="w-4 h-4"/>
                                                             </button>
@@ -287,11 +287,11 @@ export default function App() {
                                             {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
-                                                        {/* Logo Token */}
-                                                        <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/60A5FA/white?text=T'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/60A5FA/white?text=T'; }}/>
+                                                        {/* Logo Token (tetap ditampilkan) */}
+                                                        <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/60A5FA/white?text=T'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/FFFFFF/000000?text=?'; }}/>
                                                         
                                                         <div className="flex-grow">
-                                                            {/* Nama Bursa (dipersingkat jika DEX) */}
+                                                            {/* Nama Bursa (dipersingkat jika DEX, sekarang lebih agresif) */}
                                                             <p className="text-white font-medium">{isDEX(ticker.market.name) ? cleanDexName(ticker.market.name) : ticker.market.name}</p>
                                                             {/* Pair */}
                                                             <span className="text-gray-400 text-xs">{ticker.base}/{ticker.target}</span>
@@ -312,4 +312,4 @@ export default function App() {
             )}
         </div>
     );
-                                       }
+                        }
