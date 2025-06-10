@@ -53,6 +53,9 @@ const genericPlaceholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2
 
 
 export default function App() {
+    const [currentView, setCurrentView] = useState('search'); // 'search' atau 'simulation'
+
+    // State untuk Search View
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -65,6 +68,14 @@ export default function App() {
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
     const chartContainerRef = useRef();
+
+    // State untuk Simulasi View
+    const [simInvestment, setSimInvestment] = useState('');
+    const [simBuyPrice, setSimBuyPrice] = useState('');
+    const [simSellPrice, setSimSellPrice] = useState('');
+    const [simBuyFee, setSimBuyFee] = useState('0.1'); // Default fee 0.1%
+    const [simSellFee, setSimSellFee] = useState('0.1'); // Default fee 0.1%
+    const [simResult, setSimResult] = useState(null);
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -145,8 +156,7 @@ export default function App() {
         if (selectedCoinDetails && selectedCoinId && chartContainerRef.current) {
             const fetchChartData = async () => {
                 try {
-                    // Ambil data OHLC untuk grafik candlestick (1 hari, karena CoinGecko days=7 di market_chart)
-                    // CoinGecko API untuk OHLC: /coins/{id}/ohlc?vs_currency=usd&days=1
+                    // Ambil data OHLC untuk grafik candlestick (7 hari)
                     const response = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoinId}/ohlc?vs_currency=usd&days=7`); // Ubah days sesuai kebutuhan
                     if (!response.ok) throw new Error('Gagal memuat data grafik OHLC.');
                     const data = await response.json();
@@ -218,6 +228,40 @@ export default function App() {
         }
     }, [selectedCoinDetails, selectedCoinId, isModalOpen]); 
 
+
+    // Fungsi untuk menghitung simulasi
+    const calculateSimulation = (e) => {
+        e.preventDefault();
+        const investment = parseFloat(simInvestment);
+        const buyPrice = parseFloat(simBuyPrice);
+        const sellPrice = parseFloat(simSellPrice);
+        const buyFee = parseFloat(simBuyFee) / 100; // Ubah ke desimal
+        const sellFee = parseFloat(simSellFee) / 100; // Ubah ke desimal
+
+        if (isNaN(investment) || isNaN(buyPrice) || isNaN(sellPrice) || investment <= 0 || buyPrice <= 0 || sellPrice <= 0) {
+            setSimResult({ error: 'Mohon masukkan angka valid untuk semua input.' });
+            return;
+        }
+
+        const amountBought = investment / buyPrice;
+        const buyCostWithFee = investment + (investment * buyFee); // Total biaya beli termasuk fee
+        
+        const amountSold = amountBought; // Asumsi jual semua yang dibeli
+        const revenueBeforeFee = amountSold * sellPrice;
+        const netRevenue = revenueBeforeFee - (revenueBeforeFee * sellFee); // Pendapatan bersih setelah fee jual
+
+        const grossProfit = netRevenue - buyCostWithFee;
+        const roi = (grossProfit / buyCostWithFee) * 100;
+
+        setSimResult({
+            grossProfit: grossProfit,
+            roi: roi,
+            amountBought: amountBought,
+            buyCostWithFee: buyCostWithFee,
+            netRevenue: netRevenue
+        });
+    };
+
     return (
         <div className="bg-gray-900 text-gray-200 min-h-screen font-sans p-4 sm:p-6 lg:p-8">
             <div className="max-w-4xl mx-auto">
@@ -230,73 +274,178 @@ export default function App() {
                     <p className="text-gray-400 text-md">Cari token berdasarkan nama atau simbol.</p>
                 </div>
 
-                {/* Form Pencarian */}
-                <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mb-8">
-                    <div className="relative flex-grow">
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Contoh: Bitcoin, ETH, atau UNI..."
-                            className="w-full pl-10 pr-4 py-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-white"
-                        />
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                    </div>
-                    <button type="submit" disabled={loading} className="flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:bg-gray-600 disabled:cursor-not-allowed">
-                        {loading ? 'Mencari...' : 'Cari Token'}
+                {/* Navigasi Utama (Dashboard 1) */}
+                <div className="flex justify-center mb-6 border-b border-gray-700">
+                    <button 
+                        onClick={() => setCurrentView('search')} 
+                        className={`px-4 py-2 text-lg font-semibold ${currentView === 'search' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-500 hover:text-white'}`}
+                    >
+                        Pencarian
                     </button>
-                </form>
-
-                {/* Area Tampilan Konten */}
-                <div className="space-y-6">
-                    {loading && <Spinner />}
-                    
-                    {error && (
-                        <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
-                           <AlertTriangle className="w-6 h-6"/>
-                           <span>{error}</span>
-                        </div>
-                    )}
-                    
-                    {searchResults.length > 0 && !loading && !error && (
-                        <div className="bg-gray-800/50 rounded-lg p-1 sm:p-2">
-                            <h3 className="text-xl font-bold text-white p-4">Hasil Pencarian</h3>
-                            <div className="overflow-x-auto">
-                                <table className="w-full min-w-max">
-                                    <thead className="border-b border-gray-700">
-                                        <tr>
-                                            <th className="text-left p-3 font-semibold text-gray-400">Nama</th>
-                                            <th className="text-left p-3 font-semibold text-gray-400">Simbol</th>
-                                            <th className="text-right p-3 font-semibold text-gray-400">Peringkat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {searchResults.map((coin) => (
-                                            <tr key={coin.id} className="border-t border-gray-700/50 hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openCoinModal(coin.id)}>
-                                                <td className="p-3 flex items-center gap-2">
-                                                    <img src={coin.thumb} alt={coin.name} className="w-5 h-5 rounded-full" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
-                                                    <span className="font-medium text-white">{coin.name}</span>
-                                                </td>
-                                                <td className="p-3 font-mono text-gray-400">{coin.symbol?.toUpperCase()}</td>
-                                                <td className="p-3 text-right text-white">{coin.market_cap_rank || 'N/A'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {searchResults.length === 0 && !loading && !error && searchTerm && (
-                         <p className="text-center text-gray-500">Tidak ada hasil untuk "{searchTerm}".</p>
-                    )}
-                     {searchResults.length === 0 && !loading && !error && !searchTerm && (
-                         <p className="text-center text-gray-500">Mulai mencari token untuk melihat hasilnya.</p>
-                    )}
-
+                    <button 
+                        onClick={() => setCurrentView('simulate')} 
+                        className={`ml-4 px-4 py-2 text-lg font-semibold ${currentView === 'simulate' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-500 hover:text-white'}`}
+                    >
+                        Simulasi Profit
+                    </button>
+                    {/* Di sini nanti bisa ditambahkan tab untuk Dashboard 1: Overview */}
                 </div>
+
+                {/* Tampilan berdasarkan currentView */}
+                {currentView === 'search' && (
+                    <div className="space-y-6">
+                        {/* Form Pencarian */}
+                        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mb-8">
+                            <div className="relative flex-grow">
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Contoh: Bitcoin, ETH, atau UNI..."
+                                    className="w-full pl-10 pr-4 py-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-white"
+                                />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                            </div>
+                            <button type="submit" disabled={loading} className="flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:bg-gray-600 disabled:cursor-not-allowed">
+                                {loading ? 'Mencari...' : 'Cari Token'}
+                            </button>
+                        </form>
+
+                        {/* Hasil Pencarian */}
+                        {loading && <Spinner />}
+                        {error && (
+                            <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
+                               <AlertTriangle className="w-6 h-6"/>
+                               <span>{error}</span>
+                            </div>
+                        )}
+                        {searchResults.length > 0 && !loading && !error && (
+                            <div className="bg-gray-800/50 rounded-lg p-1 sm:p-2">
+                                <h3 className="text-xl font-bold text-white p-4">Hasil Pencarian</h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-max">
+                                        <thead className="border-b border-gray-700">
+                                            <tr>
+                                                <th className="text-left p-3 font-semibold text-gray-400">Nama</th>
+                                                <th className="text-left p-3 font-semibold text-gray-400">Simbol</th>
+                                                <th className="text-right p-3 font-semibold text-gray-400">Peringkat</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {searchResults.map((coin) => (
+                                                <tr key={coin.id} className="border-t border-gray-700/50 hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openCoinModal(coin.id)}>
+                                                    <td className="p-3 flex items-center gap-2">
+                                                        <img src={coin.thumb} alt={coin.name} className="w-5 h-5 rounded-full" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
+                                                        <span className="font-medium text-white">{coin.name}</span>
+                                                    </td>
+                                                    <td className="p-3 font-mono text-gray-400">{coin.symbol?.toUpperCase()}</td>
+                                                    <td className="p-3 text-right text-white">{coin.market_cap_rank || 'N/A'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                        {searchResults.length === 0 && !loading && !error && searchTerm && (
+                             <p className="text-center text-gray-500">Tidak ada hasil untuk "{searchTerm}".</p>
+                        )}
+                         {searchResults.length === 0 && !loading && !error && !searchTerm && (
+                             <p className="text-center text-gray-500">Mulai mencari token untuk melihat hasilnya.</p>
+                        )}
+                    </div>
+                )}
+
+                {/* Tampilan Simulasi Profit (Dashboard 3) */}
+                {currentView === 'simulate' && (
+                    <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
+                        <h2 className="text-2xl font-bold text-white mb-4">Simulasi Profit Arbitrase</h2>
+                        <form onSubmit={calculateSimulation} className="space-y-4">
+                            <div>
+                                <label htmlFor="investment" className="block text-gray-400 text-sm font-bold mb-2">Jumlah Investasi (USD):</label>
+                                <input
+                                    type="number"
+                                    id="investment"
+                                    value={simInvestment}
+                                    onChange={(e) => setSimInvestment(e.target.value)}
+                                    placeholder="Contoh: 1000"
+                                    step="0.01"
+                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="buyPrice" className="block text-gray-400 text-sm font-bold mb-2">Harga Beli Koin:</label>
+                                <input
+                                    type="number"
+                                    id="buyPrice"
+                                    value={simBuyPrice}
+                                    onChange={(e) => setSimBuyPrice(e.target.value)}
+                                    placeholder="Contoh: 0.50"
+                                    step="0.000001"
+                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="sellPrice" className="block text-gray-400 text-sm font-bold mb-2">Harga Jual Koin:</label>
+                                <input
+                                    type="number"
+                                    id="sellPrice"
+                                    value={simSellPrice}
+                                    onChange={(e) => setSimSellPrice(e.target.value)}
+                                    placeholder="Contoh: 0.51"
+                                    step="0.000001"
+                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="buyFee" className="block text-gray-400 text-sm font-bold mb-2">Biaya Beli (%):</label>
+                                <input
+                                    type="number"
+                                    id="buyFee"
+                                    value={simBuyFee}
+                                    onChange={(e) => setSimBuyFee(e.target.value)}
+                                    placeholder="Contoh: 0.1"
+                                    step="0.01"
+                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="sellFee" className="block text-gray-400 text-sm font-bold mb-2">Biaya Jual (%):</label>
+                                <input
+                                    type="number"
+                                    id="sellFee"
+                                    value={simSellFee}
+                                    onChange={(e) => setSimSellFee(e.target.value)}
+                                    placeholder="Contoh: 0.1"
+                                    step="0.01"
+                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                />
+                            </div>
+                            <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition-all">
+                                Hitung Simulasi
+                            </button>
+                        </form>
+
+                        {simResult && (
+                            <div className="bg-gray-700 rounded-lg p-4 space-y-2">
+                                {simResult.error ? (
+                                    <p className="text-red-400 font-bold">{simResult.error}</p>
+                                ) : (
+                                    <>
+                                        <p className="text-white">Profit Bruto: <span className={`font-bold ${simResult.grossProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>$ {simResult.grossProfit.toFixed(6)}</span></p>
+                                        <p className="text-white">ROI: <span className={`font-bold ${simResult.roi >= 0 ? 'text-green-400' : 'text-red-400'}`}>{simResult.roi.toFixed(2)} %</span></p>
+                                        <p className="text-gray-400 text-sm">Jumlah Koin Dibeli: {simResult.amountBought.toFixed(6)}</p>
+                                        <p className="text-gray-400 text-sm">Total Biaya Beli: $ {simResult.buyCostWithFee.toFixed(6)}</p>
+                                        <p className="text-gray-400 text-sm">Pendapatan Bersih Jual: $ {simResult.netRevenue.toFixed(6)}</p>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                  <footer className="text-center mt-12 text-gray-600 text-sm">
-                    <p>Data pencarian disediakan oleh CoinGecko.</p>
+                    <p>Data disediakan oleh CoinGecko.</p>
                 </footer>
             </div>
 
