@@ -225,12 +225,16 @@ export default function App() {
                                                 address && (
                                                     <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
                                                         <span className="text-gray-400">{platform}</span>
-                                                        <div className="flex items-center flex-grow mx-2">
-                                                            <span className="text-white truncate text-xs">{address}</span>
-                                                            <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500">
-                                                                <Clipboard className="w-4 h-4"/>
-                                                            </button>
-                                                        </div>
+                                                        <div className="flex items-center justify-between bg-gray-700 rounded p-2">
+    <span className="text-gray-400 w-1/4 truncate">{platform}</span> {/* Platform name might also be long, truncate it */}
+    <div className="flex items-center flex-grow mx-2 overflow-hidden"> {/* Tambahkan overflow-hidden disini */}
+        <span className="text-white truncate text-xs flex-grow">{address}</span> {/* Pastikan flex-grow untuk mengisi ruang, truncate jika overflow */}
+        <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0"> {/* flex-shrink-0 agar tombol tidak terpotong */}
+            <Clipboard className="w-4 h-4"/>
+        </button>
+    </div>
+</div>
+
                                                     </div>
                                                 )
                                             ))}
@@ -278,5 +282,5 @@ export default function App() {
             )}
         </div>
     );
-                    }
-                        
+}
+    
