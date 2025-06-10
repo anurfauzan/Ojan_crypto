@@ -25,6 +25,7 @@ export default function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     
+    // State untuk Modal Detail Koin
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCoinId, setSelectedCoinId] = useState(null);
     const [selectedCoinDetails, setSelectedCoinDetails] = useState(null);
@@ -32,7 +33,7 @@ export default function App() {
     const [modalError, setModalError] = useState(null);
 
     const handleSearch = async (e) => {
-        e.preventDefault(); // Mencegah refresh halaman
+        e.preventDefault();
         if (!searchTerm) {
             setError('Silakan masukkan nama atau simbol token.');
             return;
@@ -40,7 +41,7 @@ export default function App() {
         
         setLoading(true);
         setError(null);
-        setSearchResults([]); // Bersihkan hasil sebelumnya
+        setSearchResults([]);
 
         try {
             const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${searchTerm}`);
@@ -54,9 +55,7 @@ export default function App() {
                 setError(`Token "${searchTerm}" tidak ditemukan.`);
                 return;
             }
-            // FILTER DIPERSINGKAT: Hanya memastikan ada ID.
-            // market_cap_rank bisa null untuk beberapa hasil pencarian, jadi tidak dijadikan filter ketat.
-            const filteredCoins = data.coins.filter(coin => coin.id); 
+            const filteredCoins = data.coins.filter(coin => coin.id); // Filter dipersingkat, hanya memastikan ada ID
             setSearchResults(filteredCoins);
 
         } catch (err) {
@@ -66,6 +65,7 @@ export default function App() {
         }
     };
 
+    // Fungsi untuk membuka modal dan mengambil detail koin
     const openCoinModal = async (coinId) => {
         setSelectedCoinId(coinId);
         setIsModalOpen(true);
@@ -225,16 +225,12 @@ export default function App() {
                                                 address && (
                                                     <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
                                                         <span className="text-gray-400">{platform}</span>
-                                                        <div className="flex items-center justify-between bg-gray-700 rounded p-2">
-    <span className="text-gray-400 w-1/4 truncate">{platform}</span> {/* Platform name might also be long, truncate it */}
-    <div className="flex items-center flex-grow mx-2 overflow-hidden"> {/* Tambahkan overflow-hidden disini */}
-        <span className="text-white truncate text-xs flex-grow">{address}</span> {/* Pastikan flex-grow untuk mengisi ruang, truncate jika overflow */}
-        <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0"> {/* flex-shrink-0 agar tombol tidak terpotong */}
-            <Clipboard className="w-4 h-4"/>
-        </button>
-    </div>
-</div>
-
+                                                        <div className="flex items-center flex-grow mx-2 overflow-hidden">
+                                                            <span className="text-white truncate text-xs flex-grow">{address}</span>
+                                                            <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0">
+                                                                <Clipboard className="w-4 h-4"/>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 )
                                             ))}
@@ -283,4 +279,5 @@ export default function App() {
         </div>
     );
 }
-    
+
+                    
