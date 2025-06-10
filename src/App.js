@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Coins, AlertTriangle } from 'lucide-react'; // Pastikan lucide-react terinstal di package.json
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Coins, ArrowRight, TrendingUp, AlertTriangle, Clipboard, X } from 'lucide-react'; // Tambahkan X untuk tombol close modal
 
 // Komponen Spinner untuk loading state
 const Spinner = () => (
@@ -8,18 +8,32 @@ const Spinner = () => (
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <p className="text-cyan-300">Mencari token...</p>
+        <p className="text-cyan-300">Memuat data...</p>
     </div>
 );
+
+// Helper function to identify DEXs by name (copied from your previous code)
+const isDEX = (exchangeName) => {
+    const dexKeywords = ['uniswap', 'pancakeswap', 'sushiswap', 'quickswap', 'trader joe', 'raydium', 'serum', 'curve'];
+    const lowerCaseName = exchangeName.toLowerCase();
+    return dexKeywords.some(keyword => lowerCaseName.includes(keyword));
+};
 
 export default function App() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    
+    // State untuk Modal Detail Koin
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedCoinId, setSelectedCoinId] = useState(null);
+    const [selectedCoinDetails, setSelectedCoinDetails] = useState(null);
+    const [modalLoading, setModalLoading] = useState(false);
+    const [modalError, setModalError] = useState(null);
 
     const handleSearch = async (e) => {
-        e.preventDefault(); // Mencegah refresh halaman
+        e.preventDefault();
         if (!searchTerm) {
             setError('Silakan masukkan nama atau simbol token.');
             return;
@@ -27,21 +41,17 @@ export default function App() {
         
         setLoading(true);
         setError(null);
-        setSearchResults([]); // Bersihkan hasil sebelumnya
+        setSearchResults([]);
 
         try {
-            // Memanggil CoinGecko API untuk mencari token
             const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${searchTerm}`);
-            if (!response.ok) {
-                throw new Error(`Gagal mencari token. Status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Gagal mencari token. Status: ${response.status}`);
             const data = await response.json();
 
             if (!data.coins || data.coins.length === 0) {
                 setError(`Token "${searchTerm}" tidak ditemukan.`);
                 return;
             }
-            // Filter hanya koin yang memiliki data harga (tidak hanya NFT atau kategori lain)
             const filteredCoins = data.coins.filter(coin => coin.market_cap_rank !== null && coin.id);
             setSearchResults(filteredCoins);
 
@@ -49,6 +59,46 @@ export default function App() {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Fungsi untuk membuka modal dan mengambil detail koin
+    const openCoinModal = async (coinId) => {
+        setSelectedCoinId(coinId);
+        setIsModalOpen(true);
+        setModalLoading(true);
+        setModalError(null);
+        setSelectedCoinDetails(null); // Bersihkan detail sebelumnya
+
+        try {
+            // Fetch detail koin
+            const detailsResponse = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=true&community_data=false&developer_data=false&sparkline=false`);
+            if (!detailsResponse.ok) throw new Error('Gagal memuat detail koin.');
+            const detailsData = await detailsResponse.json();
+            setSelectedCoinDetails(detailsData);
+            
+        } catch (err) {
+            setModalError(err.message);
+        } finally {
+            setModalLoading(false);
+        }
+    };
+
+    const closeCoinModal = () => {
+        setIsModalOpen(false);
+        setSelectedCoinId(null);
+        setSelectedCoinDetails(null);
+        setModalError(null);
+    };
+
+    // Fungsi untuk menyalin contract address
+    const copyToClipboard = async (text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            alert('Contract address berhasil disalin!');
+        } catch (err) {
+            alert('Gagal menyalin contract address.');
+            console.error('Failed to copy: ', err);
         }
     };
 
@@ -106,13 +156,14 @@ export default function App() {
                                     </thead>
                                     <tbody>
                                         {searchResults.map((coin) => (
-                                            <tr key={coin.id} className="border-t border-gray-700/50 hover:bg-gray-700/50 transition-colors cursor-pointer">
+                                            // Menambahkan onClick handler ke setiap baris hasil pencarian
+                                            <tr key={coin.id} className="border-t border-gray-700/50 hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openCoinModal(coin.id)}>
                                                 <td className="p-3 flex items-center gap-2">
                                                     <img src={coin.thumb} alt={coin.name} className="w-5 h-5 rounded-full" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/FFFFFF/000000?text=?'; }}/>
                                                     <span className="font-medium text-white">{coin.name}</span>
                                                 </td>
                                                 <td className="p-3 font-mono text-gray-400">{coin.symbol.toUpperCase()}</td>
-                                                <td className="p-3 text-right text-white">{coin.market_cap_rank}</td>
+                                                <td className="p-3 text-right text-white">{coin.market_cap_rank || 'N/A'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -133,6 +184,95 @@ export default function App() {
                     <p>Data pencarian disediakan oleh CoinGecko.</p>
                 </footer>
             </div>
+
+            {/* Modal Detail Koin (Tersembunyi secara default) */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform scale-95 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                        {modalLoading && (
+                            <div className="p-6 text-center">
+                                <Spinner />
+                            </div>
+                        )}
+                        {modalError && (
+                            <div className="p-6 text-center bg-red-900/50 border border-red-700 text-red-300 rounded-lg">
+                                <p>{modalError}</p>
+                                <button onClick={closeCoinModal} className="mt-4 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg">Tutup</button>
+                            </div>
+                        )}
+                        {selectedCoinDetails && !modalLoading && !modalError && (
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center space-x-3">
+                                        <img src={selectedCoinDetails.image?.small || 'https://placehold.co/32x32/FFFFFF/000000?text=?'} alt={selectedCoinDetails.name} className="w-10 h-10 rounded-full" />
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-white">{selectedCoinDetails.name}</h2>
+                                            <p className="text-gray-400 text-sm">{selectedCoinDetails.symbol?.toUpperCase()}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={closeCoinModal} className="text-gray-400 hover:text-white text-3xl">&times;</button>
+                                </div>
+
+                                {/* Contract Addresses (Multi-chain) */}
+                                {selectedCoinDetails.platforms && Object.keys(selectedCoinDetails.platforms).length > 0 && (
+                                    <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
+                                        <h3 className="text-lg font-semibold text-white mb-2">Contract Addresses</h3>
+                                        <div className="space-y-2 text-sm">
+                                            {Object.entries(selectedCoinDetails.platforms).map(([platform, address]) => (
+                                                address && (
+                                                    <div key={platform} className="flex items-center justify-between bg-gray-700 rounded p-2">
+                                                        <span className="text-gray-400">{platform}</span>
+                                                        <div className="flex items-center flex-grow mx-2">
+                                                            <span className="text-white truncate text-xs">{address}</span>
+                                                            <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500">
+                                                                <Clipboard className="w-4 h-4"/>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Market Data (Harga saat ini) */}
+                                {selectedCoinDetails.market_data?.current_price?.usd && (
+                                    <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
+                                        <h3 className="text-lg font-semibold text-white mb-2">Harga Saat Ini</h3>
+                                        <p className="text-white text-2xl font-bold">$ {selectedCoinDetails.market_data.current_price.usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</p>
+                                        <p className={`${selectedCoinDetails.market_data.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'} text-sm`}>
+                                            {selectedCoinDetails.market_data.price_change_percentage_24h >= 0 ? '▲' : '▼'} {Math.abs(selectedCoinDetails.market_data.price_change_percentage_24h || 0).toFixed(2)}% (24h)
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Bursa (CEX/DEX) */}
+                                {selectedCoinDetails.tickers && selectedCoinDetails.tickers.length > 0 && (
+                                    <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
+                                        <h3 className="text-lg font-semibold text-white mb-2">Bursa Tersedia (Top 10)</h3>
+                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+                                            {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
+                                                ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
+                                                    <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
+                                                        <img src={ticker.market.logo || 'https://placehold.co/20x20/FFFFFF/000000?text=?'} alt={ticker.market.name} className="w-6 h-6 rounded-full bg-white p-0.5 mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/FFFFFF/000000?text=?'; }}/>
+                                                        <div className="flex-grow">
+                                                            <p className="text-white font-medium">{ticker.market.name}</p>
+                                                            <span className="text-gray-400 text-xs">{ticker.base}/{ticker.target}</span>
+                                                        </div>
+                                                        <span className="text-white font-bold mr-2">${ticker.converted_last.usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</span>
+                                                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${isDEX(ticker.market.name) ? 'bg-blue-900 text-blue-300' : 'bg-yellow-900 text-yellow-300'}`}>{isDEX(ticker.market.name) ? 'DEX' : 'CEX'}</span>
+                                                        <ArrowRight className="w-4 h-4 text-gray-400 ml-2"/>
+                                                    </a>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
