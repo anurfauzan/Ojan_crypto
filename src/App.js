@@ -33,7 +33,7 @@ const cleanDexName = (exchangeName) => {
         .replace(/exchange/gi, '') 
         .replace(/version/gi, '') 
         .trim();
-
+    
     cleaned = cleaned.replace(/[-.\s]+$/, '');
 
     if (cleaned.length < 3) return exchangeName; 
@@ -45,7 +45,7 @@ const cleanDexName = (exchangeName) => {
 const minimizeAddress = (address) => {
     if (!address) return '';
     if (address.length <= 12) return address; 
-    return `<span class="math-inline">\{address\.substring\(0, 6\)\}\.\.\.</span>{address.substring(address.length - 4)}`;
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 };
 
 // Generic placeholder for missing images (data URI for a simple circle)
@@ -57,7 +57,7 @@ export default function App() {
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
+    
     // State untuk Modal Detail Koin
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCoinId, setSelectedCoinId] = useState(null);
@@ -72,7 +72,7 @@ export default function App() {
             setError('Silakan masukkan nama atau simbol token.');
             return;
         }
-
+        
         setLoading(true);
         setError(null);
         setSearchResults([]);
@@ -115,7 +115,7 @@ export default function App() {
             }
             const detailsData = await detailsResponse.json();
             setSelectedCoinDetails(detailsData);
-
+            
         } catch (err) {
             setModalError(err.message);
         } finally {
@@ -240,14 +240,14 @@ export default function App() {
                 {/* Area Tampilan Konten */}
                 <div className="space-y-6">
                     {loading && <Spinner />}
-
+                    
                     {error && (
                         <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
                            <AlertTriangle className="w-6 h-6"/>
                            <span>{error}</span>
                         </div>
                     )}
-
+                    
                     {searchResults.length > 0 && !loading && !error && (
                         <div className="bg-gray-800/50 rounded-lg p-1 sm:p-2">
                             <h3 className="text-xl font-bold text-white p-4">Hasil Pencarian</h3>
@@ -375,7 +375,7 @@ export default function App() {
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
                                                         {/* Logo Token (ditampilkan) */}
                                                         <img src={selectedCoinDetails.image?.thumb || genericPlaceholder} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2 bg-gray-900 p-0.5" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
-
+                                                        
                                                         <div className="flex-grow">
                                                             {/* Nama Bursa (dipersingkat jika DEX, sekarang lebih agresif) */}
                                                             <p className="text-white font-medium">{isDEX(ticker.market.name) ? cleanDexName(ticker.market.name) : ticker.market.name}</p>
