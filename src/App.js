@@ -51,9 +51,20 @@ const minimizeAddress = (address) => {
 // Generic placeholder for missing images (data URI for a simple circle)
 const genericPlaceholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='gray'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3C/svg%3E";
 
+// Daftar bursa yang tersedia untuk simulasi (bisa ditambahkan nanti dari API)
+const availableExchanges = [
+    { id: 'binance', name: 'Binance', fee: 0.1 },
+    { id: 'coinbase', name: 'Coinbase', fee: 0.5 },
+    { id: 'kraken', name: 'Kraken', fee: 0.2 },
+    { id: 'bybit', name: 'Bybit', fee: 0.075 },
+    { id: 'pionex', name: 'Pionex', fee: 0.05 }, // Contoh Pionex
+    { id: 'uniswap', name: 'Uniswap (DEX)', fee: 0.3 },
+    { id: 'pancakeswap', name: 'PancakeSwap (DEX)', fee: 0.25 },
+];
+
 
 export default function App() {
-    const [currentView, setCurrentView] = useState('search'); // 'search' atau 'simulation'
+    const [currentView, setCurrentView] = useState('search'); // 'search' atau 'simulate'
 
     // State untuk Search View
     const [searchTerm, setSearchTerm] = useState('');
@@ -70,12 +81,23 @@ export default function App() {
     const chartContainerRef = useRef();
 
     // State untuk Simulasi View
-    const [simInvestment, setSimInvestment] = useState('');
-    const [simBuyPrice, setSimBuyPrice] = useState('');
-    const [simSellPrice, setSimSellPrice] = useState('');
-    const [simBuyFee, setSimBuyFee] = useState('0.1'); // Default fee 0.1%
-    const [simSellFee, setSimSellFee] = useState('0.1'); // Default fee 0.1%
+    const [simInvestment, setSimInvestment] = useState('100'); // Default value
+    const [simBuyPrice, setSimBuyPrice] = useState('0.50');
+    const [simSellPrice, setSimSellPrice] = useState('0.51');
+    const [simBuyExchange, setSimBuyExchange] = useState('binance');
+    const [simSellExchange, setSimSellExchange] = useState('pionex');
+    const [simBuyFee, setSimBuyFee] = useState(''); // Akan diisi dari selected exchange
+    const [simSellFee, setSimSellFee] = useState(''); // Akan diisi dari selected exchange
     const [simResult, setSimResult] = useState(null);
+
+    // useEffect untuk mengupdate fee saat bursa dipilih
+    useEffect(() => {
+        const buyEx = availableExchanges.find(ex => ex.id === simBuyExchange);
+        const sellEx = availableExchanges.find(ex => ex.id === simSellExchange);
+        setSimBuyFee(buyEx ? buyEx.fee.toString() : '0.1');
+        setSimSellFee(sellEx ? sellEx.fee.toString() : '0.1');
+    }, [simBuyExchange, simSellExchange]);
+
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -347,12 +369,14 @@ export default function App() {
                                 </div>
                             </div>
                         )}
+
                         {searchResults.length === 0 && !loading && !error && searchTerm && (
                              <p className="text-center text-gray-500">Tidak ada hasil untuk "{searchTerm}".</p>
                         )}
                          {searchResults.length === 0 && !loading && !error && !searchTerm && (
                              <p className="text-center text-gray-500">Mulai mencari token untuk melihat hasilnya.</p>
                         )}
+
                     </div>
                 )}
 
