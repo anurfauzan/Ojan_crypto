@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react'; // Tambahkan useRef
 import { Search, Coins, ArrowRight, TrendingUp, AlertTriangle, Clipboard, X } from 'lucide-react';
+// Import library chart (contoh: lightweight-charts)
+import { createChart } from 'lightweight-charts'; 
 
 // Komponen Spinner untuk loading state
 const Spinner = () => (
@@ -22,18 +24,18 @@ const isDEX = (exchangeName) => {
 // Helper function to clean DEX names from long addresses or extra info
 const cleanDexName = (exchangeName) => {
     let cleaned = exchangeName
-        .replace(/\s*0x[0-9a-fA-F]{40}\s*/g, '') // Remove hex addresses
-        .replace(/\(V[0-9]+\)/g, '') // Remove (V1), (V2), (V3)
-        .replace(/\(Polygon\)/g, '') // Remove (Polygon) etc.
-        .replace(/\(BSC\)/g, '') // Remove (BSC)
-        .replace(/\(Ethereum\)/g, '') // Remove (Ethereum)
-        .replace(/\(Arbitrum\)/g, '') // Remove (Arbitrum)
-        .replace(/pool/gi, '') // Remove "pool" (case-insensitive)
-        .replace(/exchange/gi, '') // Remove "exchange"
-        .replace(/version/gi, '') // Remove "version"
+        .replace(/\s*0x[0-9a-fA-F]{40}\s*/g, '')
+        .replace(/\(V[0-9]+\)/g, '')
+        .replace(/\(Polygon\)/g, '')
+        .replace(/\(BSC\)/g, '')
+        .replace(/\(Ethereum\)/g, '')
+        .replace(/\(Arbitrum\)/g, '')
+        .replace(/pool/gi, '')
+        .replace(/exchange/gi, '')
+        .replace(/version/gi, '')
         .trim();
     
-    cleaned = cleaned.replace(/[-.\s]+$/, ''); // Remove trailing hyphens, dots, or spaces
+    cleaned = cleaned.replace(/[-.\s]+$/, '');
 
     if (cleaned.length < 3) return exchangeName; 
 
@@ -43,7 +45,7 @@ const cleanDexName = (exchangeName) => {
 // Helper function to minimize contract addresses (for display only)
 const minimizeAddress = (address) => {
     if (!address) return '';
-    if (address.length <= 12) return address; // Jika pendek, biarkan saja
+    if (address.length <= 12) return address;
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 };
 
@@ -63,6 +65,7 @@ export default function App() {
     const [selectedCoinDetails, setSelectedCoinDetails] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
+    const chartContainerRef = useRef(); // Ref untuk container chart
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -138,6 +141,76 @@ export default function App() {
         }
     };
 
+    // useEffect untuk inisialisasi dan update chart
+    useEffect(() => {
+        if (selectedCoinDetails && selectedCoinId && chartContainerRef.current) {
+            const fetchChartData = async () => {
+                try {
+                    // Ambil data historis untuk grafik (misal: 7 hari)
+                    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoinId}/market_chart?vs_currency=usd&days=7`);
+                    if (!response.ok) throw new Error('Gagal memuat data grafik.');
+                    const data = await response.json();
+
+                    if (!data.prices || data.prices.length === 0) {
+                        throw new Error('Tidak ada data harga historis untuk grafik.');
+                    }
+
+                    // Format data untuk lightweight-charts
+                    const chartData = data.prices.map(price => ({
+                        time: price[0] / 1000, // Waktu dalam detik
+                        value: price[1] // Harga
+                    }));
+
+                    // Inisialisasi Chart
+                    const chart = createChart(chartContainerRef.current, {
+                        width: chartContainerRef.current.clientWidth,
+                        height: 300,
+                        layout: {
+                            backgroundColor: '#1a202c', // Warna latar belakang chart
+                            textColor: '#d1d4db', // Warna teks
+                        },
+                        grid: {
+                            vertLines: { color: '#2d3748' }, // Garis grid vertikal
+                            horzLines: { color: '#2d3748' }, // Garis grid horizontal
+                        },
+                        timeScale: {
+                            timeVisible: true,
+                            secondsVisible: false,
+                        },
+                        crosshair: {
+                            mode: 0, // Crosshair mode
+                        },
+                    });
+
+                    // Tambahkan garis series (area chart)
+                    const areaSeries = chart.addAreaSeries({
+                        lineColor: '#21C55E', // Warna garis
+                        topColor: 'rgba(33, 197, 94, 0.4)', // Warna area atas
+                        bottomColor: 'rgba(33, 197, 94, 0.05)', // Warna area bawah
+                    });
+                    areaSeries.setData(chartData);
+
+                    // Sesuaikan ukuran chart saat modal di-resize (jika diperlukan)
+                    const resizeHandler = () => {
+                        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+                    };
+                    window.addEventListener('resize', resizeHandler);
+
+                    return () => {
+                        window.removeEventListener('resize', resizeHandler);
+                        chart.remove(); // Bersihkan chart saat komponen unmount
+                    };
+
+                } catch (err) {
+                    console.error("Error loading chart data:", err);
+                    chartContainerRef.current.innerHTML = `<p class="text-center text-red-500">Gagal memuat grafik: ${err.message}</p>`;
+                }
+            };
+
+            fetchChartData();
+        }
+    }, [selectedCoinDetails, selectedCoinId, isModalOpen]); // Rerun effect saat coin details atau modal berubah
+
     return (
         <div className="bg-gray-900 text-gray-200 min-h-screen font-sans p-4 sm:p-6 lg:p-8">
             <div className="max-w-4xl mx-auto">
@@ -194,7 +267,7 @@ export default function App() {
                                         {searchResults.map((coin) => (
                                             <tr key={coin.id} className="border-t border-gray-700/50 hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openCoinModal(coin.id)}>
                                                 <td className="p-3 flex items-center gap-2">
-                                                    <img src={coin.thumb} alt={coin.name} className="w-5 h-5 rounded-full" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/FFFFFF/000000?text=?'; }}/>
+                                                    <img src={coin.thumb} alt={coin.name} className="w-5 h-5 rounded-full" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
                                                     <span className="font-medium text-white">{coin.name}</span>
                                                 </td>
                                                 <td className="p-3 font-mono text-gray-400">{coin.symbol?.toUpperCase()}</td>
@@ -249,6 +322,18 @@ export default function App() {
                                     <button onClick={closeCoinModal} className="text-gray-400 hover:text-white text-3xl">&times;</button>
                                 </div>
 
+                                {/* Bagian Grafik TradingView (di sini akan kita masukkan) */}
+                                <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
+                                    <h3 className="text-lg font-semibold text-white mb-2">Grafik Harga (7 Hari)</h3>
+                                    <div ref={chartContainerRef} className="w-full h-[300px]">
+                                        {/* Chart akan dirender di sini oleh lightweight-charts */}
+                                        {!selectedCoinDetails.market_data?.current_price?.usd && (
+                                            <p className="text-center text-gray-500 py-4">Data grafik tidak tersedia.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+
                                 {/* Contract Addresses (Multi-chain) */}
                                 {selectedCoinDetails.platforms && Object.keys(selectedCoinDetails.platforms).length > 0 && (
                                     <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
@@ -292,7 +377,7 @@ export default function App() {
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
                                                         {/* TIDAK ADA LOGO BURSA */}
-                                                        {/* Logo Token (tetap ditampilkan) */}
+                                                        {/* Logo Token (ditampilkan) */}
                                                         <img src={selectedCoinDetails.image?.thumb || genericPlaceholder} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2 bg-gray-900 p-0.5" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
                                                         
                                                         <div className="flex-grow">
