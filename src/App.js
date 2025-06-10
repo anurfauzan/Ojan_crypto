@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // Tambahkan useRef
+import React, { useState, useEffect, useMemo, useRef } from 'react'; 
 import { Search, Coins, ArrowRight, TrendingUp, AlertTriangle, Clipboard, X } from 'lucide-react';
-// Import library chart (contoh: lightweight-charts)
 import { createChart } from 'lightweight-charts'; 
 
 // Komponen Spinner untuk loading state
@@ -24,15 +23,15 @@ const isDEX = (exchangeName) => {
 // Helper function to clean DEX names from long addresses or extra info
 const cleanDexName = (exchangeName) => {
     let cleaned = exchangeName
-        .replace(/\s*0x[0-9a-fA-F]{40}\s*/g, '')
-        .replace(/\(V[0-9]+\)/g, '')
-        .replace(/\(Polygon\)/g, '')
-        .replace(/\(BSC\)/g, '')
-        .replace(/\(Ethereum\)/g, '')
-        .replace(/\(Arbitrum\)/g, '')
-        .replace(/pool/gi, '')
-        .replace(/exchange/gi, '')
-        .replace(/version/gi, '')
+        .replace(/\s*0x[0-9a-fA-F]{40}\s*/g, '') 
+        .replace(/\(V[0-9]+\)/g, '') 
+        .replace(/\(Polygon\)/g, '') 
+        .replace(/\(BSC\)/g, '') 
+        .replace(/\(Ethereum\)/g, '') 
+        .replace(/\(Arbitrum\)/g, '') 
+        .replace(/pool/gi, '') 
+        .replace(/exchange/gi, '') 
+        .replace(/version/gi, '') 
         .trim();
     
     cleaned = cleaned.replace(/[-.\s]+$/, '');
@@ -45,7 +44,7 @@ const cleanDexName = (exchangeName) => {
 // Helper function to minimize contract addresses (for display only)
 const minimizeAddress = (address) => {
     if (!address) return '';
-    if (address.length <= 12) return address;
+    if (address.length <= 12) return address; 
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 };
 
@@ -65,7 +64,7 @@ export default function App() {
     const [selectedCoinDetails, setSelectedCoinDetails] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
-    const chartContainerRef = useRef(); // Ref untuk container chart
+    const chartContainerRef = useRef();
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -146,51 +145,49 @@ export default function App() {
         if (selectedCoinDetails && selectedCoinId && chartContainerRef.current) {
             const fetchChartData = async () => {
                 try {
-                    // Ambil data historis untuk grafik (misal: 7 hari)
                     const response = await fetch(`https://api.coingecko.com/api/v3/coins/${selectedCoinId}/market_chart?vs_currency=usd&days=7`);
                     if (!response.ok) throw new Error('Gagal memuat data grafik.');
                     const data = await response.json();
 
                     if (!data.prices || data.prices.length === 0) {
-                        throw new Error('Tidak ada data harga historis untuk grafik.');
+                        chartContainerRef.current.innerHTML = `<p class="text-center text-gray-500 py-4">Data grafik tidak tersedia.</p>`;
+                        return;
                     }
 
-                    // Format data untuk lightweight-charts
                     const chartData = data.prices.map(price => ({
-                        time: price[0] / 1000, // Waktu dalam detik
-                        value: price[1] // Harga
+                        time: price[0] / 1000, 
+                        value: price[1] 
                     }));
 
-                    // Inisialisasi Chart
+                    // Bersihkan chart lama jika ada
+                    chartContainerRef.current.innerHTML = ''; 
                     const chart = createChart(chartContainerRef.current, {
                         width: chartContainerRef.current.clientWidth,
                         height: 300,
                         layout: {
-                            backgroundColor: '#1a202c', // Warna latar belakang chart
-                            textColor: '#d1d4db', // Warna teks
+                            backgroundColor: '#1a202c', 
+                            textColor: '#d1d4db', 
                         },
                         grid: {
-                            vertLines: { color: '#2d3748' }, // Garis grid vertikal
-                            horzLines: { color: '#2d3748' }, // Garis grid horizontal
+                            vertLines: { color: '#2d3748' }, 
+                            horzLines: { color: '#2d3748' }, 
                         },
                         timeScale: {
                             timeVisible: true,
                             secondsVisible: false,
                         },
                         crosshair: {
-                            mode: 0, // Crosshair mode
+                            mode: 0, 
                         },
                     });
 
-                    // Tambahkan garis series (area chart)
                     const areaSeries = chart.addAreaSeries({
-                        lineColor: '#21C55E', // Warna garis
-                        topColor: 'rgba(33, 197, 94, 0.4)', // Warna area atas
-                        bottomColor: 'rgba(33, 197, 94, 0.05)', // Warna area bawah
+                        lineColor: '#21C55E', 
+                        topColor: 'rgba(33, 197, 94, 0.4)', 
+                        bottomColor: 'rgba(33, 197, 94, 0.05)', 
                     });
                     areaSeries.setData(chartData);
 
-                    // Sesuaikan ukuran chart saat modal di-resize (jika diperlukan)
                     const resizeHandler = () => {
                         chart.applyOptions({ width: chartContainerRef.current.clientWidth });
                     };
@@ -198,7 +195,7 @@ export default function App() {
 
                     return () => {
                         window.removeEventListener('resize', resizeHandler);
-                        chart.remove(); // Bersihkan chart saat komponen unmount
+                        chart.remove(); 
                     };
 
                 } catch (err) {
@@ -209,7 +206,7 @@ export default function App() {
 
             fetchChartData();
         }
-    }, [selectedCoinDetails, selectedCoinId, isModalOpen]); // Rerun effect saat coin details atau modal berubah
+    }, [selectedCoinDetails, selectedCoinId, isModalOpen]); 
 
     return (
         <div className="bg-gray-900 text-gray-200 min-h-screen font-sans p-4 sm:p-6 lg:p-8">
@@ -366,40 +363,4 @@ export default function App() {
                                             {selectedCoinDetails.market_data.price_change_percentage_24h >= 0 ? '▲' : '▼'} {Math.abs(selectedCoinDetails.market_data.price_change_percentage_24h || 0).toFixed(2)}% (24h)
                                         </p>
                                     </div>
-                                )}
-
-                                {/* Bursa (CEX/DEX) */}
-                                {selectedCoinDetails.tickers && selectedCoinDetails.tickers.length > 0 && (
-                                    <div className="mb-4 p-3 bg-gray-700/30 rounded-md">
-                                        <h3 className="text-lg font-semibold text-white mb-2">Bursa Tersedia (Top 10)</h3>
-                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto scrollbar-thin">
-                                            {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
-                                                ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
-                                                    <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
-                                                        {/* TIDAK ADA LOGO BURSA */}
-                                                        {/* Logo Token (ditampilkan) */}
-                                                        <img src={selectedCoinDetails.image?.thumb || genericPlaceholder} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2 bg-gray-900 p-0.5" onError={(e) => { e.target.onerror = null; e.target.src=genericPlaceholder; }}/>
-                                                        
-                                                        <div className="flex-grow">
-                                                            {/* Nama Bursa (dipersingkat jika DEX, sekarang lebih agresif) */}
-                                                            <p className="text-white font-medium">{isDEX(ticker.market.name) ? cleanDexName(ticker.market.name) : ticker.market.name}</p>
-                                                            {/* Pair */}
-                                                            <span className="text-gray-400 text-xs">{ticker.base}/{ticker.target}</span>
-                                                        </div>
-                                                        <span className="text-white font-bold mr-2">${ticker.converted_last.usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</span>
-                                                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${isDEX(ticker.market.name) ? 'bg-blue-900 text-blue-300' : 'bg-yellow-900 text-yellow-300'}`}>{isDEX(ticker.market.name) ? 'DEX' : 'CEX'}</span>
-                                                        <ArrowRight className="w-4 h-4 text-gray-400 ml-2"/>
-                                                    </a>
-                                                )
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
+       
