@@ -39,6 +39,13 @@ const cleanDexName = (exchangeName) => {
     return cleaned;
 };
 
+// Helper function to minimize contract addresses
+const minimizeAddress = (address) => {
+    if (!address) return '';
+    if (address.length <= 10) return address; // Jika pendek, biarkan saja
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+};
+
 
 export default function App() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -76,7 +83,7 @@ export default function App() {
                 setError(`Token "${searchTerm}" tidak ditemukan.`);
                 return;
             }
-            const filteredCoins = data.coins.filter(coin => coin.id);
+            const filteredCoins = data.coins.filter(coin => coin.id); 
             setSearchResults(filteredCoins);
 
         } catch (err) {
@@ -249,7 +256,7 @@ export default function App() {
                                                         <span className="text-gray-400">{platform}</span>
                                                         {/* Perbaikan untuk overflow alamat kontrak */}
                                                         <div className="flex items-center flex-grow mx-2 overflow-hidden">
-                                                            <span className="text-white truncate text-xs flex-grow">{address}</span>
+                                                            <span className="text-white truncate text-xs flex-grow">{minimizeAddress(address)}</span> {/* Menggunakan minimizeAddress */}
                                                             <button onClick={() => copyToClipboard(address)} className="ml-2 text-cyan-400 hover:text-cyan-500 flex-shrink-0">
                                                                 <Clipboard className="w-4 h-4"/>
                                                             </button>
@@ -280,12 +287,9 @@ export default function App() {
                                             {selectedCoinDetails.tickers.slice(0, 10).map((ticker, index) => (
                                                 ticker.trade_url && ticker.converted_last && ticker.converted_last.usd > 0 && (
                                                     <a key={index} href={ticker.trade_url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
-                                                        {/* Logo Exchange */}
-                                                        <img src={ticker.market.logo || 'https://placehold.co/20x20/22C55E/white?text=X'} alt={ticker.market.name} className="w-6 h-6 rounded-full bg-gray-900 p-0.5 mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/20x20/22C55E/white?text=X'; }}/>
-                                                        
                                                         {/* Logo Token */}
                                                         <img src={selectedCoinDetails.image?.thumb || 'https://placehold.co/16x16/60A5FA/white?text=T'} alt={selectedCoinDetails.symbol} className="w-4 h-4 rounded-full mr-2" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/16x16/60A5FA/white?text=T'; }}/>
-
+                                                        
                                                         <div className="flex-grow">
                                                             {/* Nama Bursa (dipersingkat jika DEX) */}
                                                             <p className="text-white font-medium">{isDEX(ticker.market.name) ? cleanDexName(ticker.market.name) : ticker.market.name}</p>
@@ -308,4 +312,4 @@ export default function App() {
             )}
         </div>
     );
-                        }
+                                       }
