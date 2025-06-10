@@ -33,7 +33,7 @@ const cleanDexName = (exchangeName) => {
         .replace(/exchange/gi, '') 
         .replace(/version/gi, '') 
         .trim();
-    
+
     cleaned = cleaned.replace(/[-.\s]+$/, '');
 
     if (cleaned.length < 3) return exchangeName; 
@@ -45,7 +45,7 @@ const cleanDexName = (exchangeName) => {
 const minimizeAddress = (address) => {
     if (!address) return '';
     if (address.length <= 12) return address; 
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    return `<span class="math-inline">\{address\.substring\(0, 6\)\}\.\.\.</span>{address.substring(address.length - 4)}`;
 };
 
 // Generic placeholder for missing images (data URI for a simple circle)
@@ -57,7 +57,7 @@ export default function App() {
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    
+
     // State untuk Modal Detail Koin
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCoinId, setSelectedCoinId] = useState(null);
@@ -72,7 +72,7 @@ export default function App() {
             setError('Silakan masukkan nama atau simbol token.');
             return;
         }
-        
+
         setLoading(true);
         setError(null);
         setSearchResults([]);
@@ -115,7 +115,7 @@ export default function App() {
             }
             const detailsData = await detailsResponse.json();
             setSelectedCoinDetails(detailsData);
-            
+
         } catch (err) {
             setModalError(err.message);
         } finally {
@@ -240,14 +240,14 @@ export default function App() {
                 {/* Area Tampilan Konten */}
                 <div className="space-y-6">
                     {loading && <Spinner />}
-                    
+
                     {error && (
                         <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg flex items-center gap-3">
                            <AlertTriangle className="w-6 h-6"/>
                            <span>{error}</span>
                         </div>
                     )}
-                    
+
                     {searchResults.length > 0 && !loading && !error && (
                         <div className="bg-gray-800/50 rounded-lg p-1 sm:p-2">
                             <h3 className="text-xl font-bold text-white p-4">Hasil Pencarian</h3>
@@ -363,4 +363,6 @@ export default function App() {
                                             {selectedCoinDetails.market_data.price_change_percentage_24h >= 0 ? '▲' : '▼'} {Math.abs(selectedCoinDetails.market_data.price_change_percentage_24h || 0).toFixed(2)}% (24h)
                                         </p>
                                     </div>
-       
+                                )}
+
+                
